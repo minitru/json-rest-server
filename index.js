@@ -8,7 +8,7 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
     , functions = require('./functions')
     ;
 
-  var serverDomain = '127.0.0.1'
+  var serverDomain = '159.203.160.169' 
     , serverUrl = 'http://' + serverDomain + ':' + serverPort
     , fileExtension = '.json'
     , server
@@ -53,30 +53,39 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
      e.g. http://127.0.0.1:1337/posts -> ~/posts.json
      */
     else if (request.method == 'GET' && fs.existsSync(filePath)) {
-
       functions.readJSONFile(filePath)
         .then(function (content) {
           content = JSON.stringify(content);
+	  // SMM RESULTIFY = MAKE THIS A SWITCH
+	  content = "{ \"Result\": " + content + " }";
           reply(request, response, 200, {'Content-Type': 'application/json'}, content, filePath);
         })
         .catch(function (err) {
-          reply(request, response, 500, {'Content-Type': 'text/plain'}, err + "\n", filePath);
+          reply(request, response, 400, {'Content-Type': 'text/plain'}, err + "\n", filePath);
         })
     }
 
     /*
      On GET method, checks if directory exists
      e.g. http://127.0.0.1:1337/posts -> ~/posts/
+     SMM THERE'S A BUG HERE - DOESN'T HANDLE EMPTY DIRECTORIES
+     SHOULD RETURN A 404
      */
     else if (request.method == 'GET' && fs.existsSync(dirPath)) {
       functions.readDir(dirPath, fileExtension)
         .then(functions.pushContentFiles)
         .then(function (content) {
+	  console.log("CONTENT LEN: " + content.length);
           content = JSON.stringify(content);
+	  // SMM RESULTIFY = MAKE THIS A SWITCH
+	  content = "{ \"Result\": " + content + " }";
           reply(request, response, 200, {'Content-Type': 'application/json'}, content, dirPath);
         })
         .catch(function (err) {
-          reply(request, response, 500, {'Content-Type': 'text/plain'}, err, dirPath);
+	  console.log("SEAN DIR CONTENT LEN: " + content.length);
+          // reply(request, response, 200, {'Content-Type': 'text/plain'}, err, dirPath);
+	  content = "{ \"Result\": \"0\" }";
+          reply(request, response, 200, {'Content-Type': 'application/json'}, content, dirPath);
         })
     }
 
@@ -101,14 +110,18 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
         fs.readdir(dirPath, function (err, files) {
 
           // To create a new file, it searches for a new id and a new name
+	  // SMM SUPPORT FOR BROKEN BACKEND THAT PUT EVERYTHING IN QUOTES
+	  // "1" not just 1
           var id = files.length;
           do {
-            jsonContent.id = id;
-            filePath = dirPath + '/' + id++ + fileExtension
+	    // SMM MAKE id -> Id AND MAKE THE ID A STRING
+            jsonContent.Id = String(id);	// SMM WHY SO BROKEN?
+            filePath = dirPath + '/' + id++ + fileExtension;
           } while (fs.existsSync(filePath));
 
           // Prepare the JSON to be written in the file
           var content = JSON.stringify(jsonContent);
+		console.log(jsonContent);	// SMM
 
           // Write or overwrite the content
           fs.writeFile(filePath, content, function (err) {
@@ -119,6 +132,8 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
             }
 
             // If it is all done, it returns the updated content with a 200 http status
+	    // SNN STUPID RESULT CRAP AGAIN 
+	    content = "{ \"Result\": " + content + " }";
             reply(request, response, 200, {'Content-Type': 'application/json'}, content, filePath);
           });
         })
@@ -165,6 +180,8 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
           }
 
           // If it is all done, it returns the updated content with a 200 http status
+	  // SNN STUPID RESULT CRAP AGAIN 
+	  content = "{ \"Result\": " + content + " }";
           reply(request, response, 200, {'Content-Type': 'application/json'}, content, filePath);
         });
 
@@ -186,7 +203,13 @@ module.exports = function (entryPoint, serverPort, ALLOW_CORS) {
         }
 
         // If it is all done, it returns an empty content with a 200 http status
-        reply(request, response, 200, {'Content-Type': 'text/plain'}, null, filePath);
+	// SMM WHAT DOES THE APPLICATION EXPECT?
+	// OF COURSE!  ===> { "Result": 1 }
+	content = "{ \"Result\": 1 }";
+        // OLD NORMAL RESPONE 
+	// reply(request, response, 200, {'Content-Type': 'text/plain'}, null, filePath);
+	// NEW BROKEN WAY
+        reply(request, response, 200, {'Content-Type': 'application/json'}, content, dirPath);
       });
     }
 
